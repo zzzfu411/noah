@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'">
+<title>Noah</title>
+<style>
+:root{color-scheme:light dark;--canvas:#f1f2f4;--ink:#25272c;--muted:#626772;--accent:#2864d7;--glass:rgba(245,247,250,.16)}
+@media(prefers-color-scheme:dark){:root{--canvas:#202124;--ink:#f0f1f3;--muted:#b3b7c0;--accent:#91baff;--glass:rgba(25,27,31,.24)}}
+body{margin:0;background:var(--canvas);color:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;display:grid;place-items:center;height:100vh;-webkit-app-region:drag}
+:root[data-window-material="sidebar"]{background:transparent}:root[data-window-material="sidebar"] body{background:var(--glass)}
+main{text-align:center}h1{font-size:30px;font-weight:600;margin:0 0 12px;letter-spacing:-.6px}p{color:var(--muted);font-size:12px}.pulse{width:28px;height:2px;background:var(--accent);margin:24px auto;border-radius:2px;animation:pulse 1.6s ease-in-out infinite}@keyframes pulse{50%{opacity:.35;transform:scaleX(.65)}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}
+</style>
+<main><img src="assets/icon.png" width="88" height="88" alt=""><h1>Noah</h1><p>正在打开你的协作空间</p><div class="pulse" aria-hidden="true"></div></main>
+</html>

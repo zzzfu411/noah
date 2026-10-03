@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "installedAt": "2026-09-23",
+  "scope": "repository",
+  "skillsDirectory": ".agents/skills",
+  "runtimeCache": ".impeccable/runtime",
+  "runtimeCacheIgnored": true,
+  "globalSkillInstallation": false,
+  "skills": [
+    {
+      "name": "macos-design",
+      "repo": "ceorkm/macos-design-skill",
+      "url": "https://github.com/ceorkm/macos-design-skill",
+      "path": ".",
+      "commit": "8f528a2364f996cd42f02a10b1b27198a74ca2a3",
+      "version": null,
+      "versionNote": "No independent version is declared in the installed SKILL.md.",
+      "destination": ".agents/skills/macos-design",
+      "license": {
+        "spdx": "MIT",
+        "evidence": "README.md: License section declares MIT.",
+        "source": "https://github.com/ceorkm/macos-design-skill/blob/8f528a2364f996cd42f02a10b1b27198a74ca2a3/README.md",
+        "fullLicenseFile": null,
+        "note": "The pinned upstream root copied into this project contains no separate LICENSE file; no missing license text was invented."
+      },
+      "localChanges": []
+    },
+    {
+      "name": "impeccable",
+      "repo": "pbakaus/impeccable",
+      "url": "https://github.com/pbakaus/impeccable",
+      "path": ".agents/skills/impeccable",
+      "commit": "83c2c735777c68e30ea536ab9cc97f7843456945",
+      "version": "4.3.1",
+      "versionEvidence": "SKILL.md metadata.version",
+      "engineVersion": "0.1.5",
+      "engineVersionEvidence": "scripts/VERSION",
+      "destination": ".agents/skills/impeccable",
+      "license": {
+        "spdx": "Apache-2.0",
+        "source": "https://raw.githubusercontent.com/pbakaus/impeccable/83c2c735777c68e30ea536ab9cc97f7843456945/LICENSE",
+        "fullLicenseFile": ".agents/skills/impeccable/LICENSE",
+        "sha256": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812",
+        "note": "Copied unchanged from the pinned repository root because the installed skill subdirectory did not include the root license."
+      },
+      "localChanges": [
+        "Added the exact upstream root LICENSE; no skill instructions were modified."
+      ]
+    }
+  ]
+}

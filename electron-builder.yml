@@ -1,0 +1,32 @@
+appId: com.yeuxark.noah
+productName: Noah
+asar: false
+npmRebuild: false
+electronDist: node_modules/electron/dist
+directories:
+  output: release
+files:
+  - desktop/**/*
+  - src/**/*
+  - extensions/**/*
+  - public/**/*
+  - package.json
+  - README.md
+  - SPEC.md
+  - ARCHITECTURE.md
+  - PROMPTS.md
+  - PRODUCT.md
+  - DESIGN.md
+  - docs/**/*.md
+  - '!**/.noah/**'
+  - '!**/*.map'
+  - '!**/test/**'
+  - '!**/tests/**'
+  - '!**/example/**'
+  - '!**/examples/**'
+mac:
+  category: public.app-category.productivity
+  icon: desktop/assets/icon.icns
+  target: dir
+  identity: '-'
+  hardenedRuntime: false

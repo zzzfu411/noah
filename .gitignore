@@ -1,0 +1,23 @@
+node_modules/
+.noah/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+coverage/
+release/
+output/
+desktop/assets/icon.iconset/
+.impeccable/runtime/
+.impeccable/review/
+
+# Local databases and credentials never belong in the public source repository.
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.pem
+*.key
+.grok/
+.pi/

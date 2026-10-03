@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Noah · 本地 Agent 协作</title>
+  <link rel="icon" type="image/png" sizes="256x256" href="/assets/noah/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/rich-text.js" defer></script>
+  <script src="/app.js" defer></script>
+  <script src="/maturity.js" defer></script>
+</head>
+<body>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></symbol>
+  <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 15V3m-4 4 4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+  <symbol id="i-attach" viewBox="0 0 24 24"><path d="m8 12 6-6a3.5 3.5 0 0 1 5 5l-8 8a5 5 0 0 1-7-7l8-8m-5 11 8-8"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M12 4a8 8 0 0 1 0 16" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-local" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Zm0 0v6h6M8 13h8m-8 4h5"/></symbol>
+</svg>
+<div id="desktop-titlebar" class="desktop-titlebar" aria-hidden="true"></div>
+<div class="app">
+  <aside class="sidebar" aria-label="工作区导航">
+    <a class="brand" href="/" aria-label="Noah 首页"><img class="brand-mark" src="/assets/noah/logo.png" width="40" height="40" alt=""><span>Noah</span></a>
+    <button id="new-task" class="new-task"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>新建讨论</span><kbd id="new-task-shortcut" aria-hidden="true">⌘ N</kbd></button>
+    <label class="task-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="task-search" type="search" placeholder="搜索讨论" aria-label="搜索讨论" autocomplete="off"><kbd aria-hidden="true">⌘ K</kbd></label>
+    <button id="show-attention" class="harness-entry attention-entry" type="button"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><span>待处理</span><span id="attention-count">0</span></button>
+    <div class="section-heading"><h2>讨论</h2><select id="task-filter" class="quiet-select" aria-label="讨论列表范围"><option value="current">当前</option><option value="archived">已归档</option><option value="all">全部</option></select><span id="task-count">0</span></div>
+    <nav id="task-list" aria-label="任务列表"></nav>
+    <p id="search-empty" class="search-empty" hidden>没有找到匹配的协作</p>
+    <div class="sidebar-footer">
+      <button id="show-harnesses" class="harness-entry" type="button"><svg class="icon" aria-hidden="true"><use href="#i-local"/></svg><span>本机 Agents</span><span id="harness-count">检测中</span></button>
+      <div class="workspace-summary"><svg class="icon" aria-hidden="true"><use href="#i-local"/></svg><div><span class="workspace-name">本地工作区</span><span id="connection" data-state="reconnecting" role="status">正在连接</span></div><button id="theme-toggle" class="icon-button" type="button" title="外观：跟随系统" aria-label="外观：跟随系统"><svg class="icon" aria-hidden="true"><use href="#i-theme"/></svg></button></div>
+      <small id="model-label" class="config-caption">读取模型配置中</small>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="task-header">
+      <div id="header-peers" class="header-peers" aria-label="讨论参与者" hidden></div>
+      <div class="task-heading"><h1 id="task-title">你的协作空间</h1><div class="task-subtitle"><span id="task-status"></span><span id="task-model" hidden></span></div></div>
+      <div class="header-actions">
+        <button id="pause" class="compact-button" title="暂停新消息的处理，当前运行会继续完成" hidden><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg><span>暂停</span></button>
+        <button id="stop" class="compact-button danger" title="停止当前运行，并暂停新消息" hidden><svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg><span>停止</span></button>
+        <button id="resume" class="compact-button" hidden><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span>继续协作</span></button>
+        <button id="export" class="icon-button" title="导出对话" aria-label="导出对话" hidden><svg class="icon" aria-hidden="true"><use href="#i-export"/></svg></button>
+        <button id="find-messages" class="icon-button" title="搜索消息（⌘F）" aria-label="搜索消息"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button><span class="toolbar-divider" aria-hidden="true"></span>
+        <button id="toggle-activity" class="icon-button" title="Agent 与共享资料" aria-label="Agent 与共享资料" aria-controls="activity" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-panel"/></svg></button>
+      </div>
+    </header>
+    <div id="notice" role="status" hidden><span id="notice-text"></span> <button id="retry-connection" class="text-button" type="button" hidden>重新连接</button></div>
+    <div id="history-bar" class="history-bar" hidden><button id="load-older" class="text-button" type="button">加载更早的消息</button><span id="history-status" role="status"></span></div>
+    <section id="timeline" class="timeline" aria-label="共享对话" aria-live="polite"></section>
+    <div id="empty" class="empty-state">
+      <div class="empty-peers" aria-label="参与的 Agent"><span class="empty-peer"><span class="peer-symbol grok"><img src="/assets/harnesses/grok.svg" alt="" class="harness-logo"></span><span>Grok</span></span><span class="peer-connector" aria-hidden="true"></span><span class="empty-peer"><span class="peer-symbol pi"><img src="/assets/harnesses/pi.svg" alt="" class="harness-logo"></span><span>pi</span></span></div>
+      <h2>好想法，值得一起想。</h2>
+      <p>把问题带给 Grok 和 pi。<br>让不同的 Agent 在同一场讨论中相遇。</p>
+      <button id="empty-start" class="primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>开启第一场讨论</button>
+      <small>消息与共享资料保存在本机</small>
+    </div>
+    <div id="composer-region" class="composer-region" hidden>
+      <form id="composer" class="composer" hidden>
+        <div class="composer-top"><label for="recipient">发送给</label><div class="recipient-control"><img id="recipient-logo" src="/assets/harnesses/grok.svg" alt="" class="harness-logo"><select id="recipient"><option value="grok">Grok</option><option value="pi">pi</option></select></div><span id="reply-label"></span><button id="clear-reply" class="text-button" type="button" hidden>取消回复</button></div>
+        <label class="sr-only" for="message">消息</label><textarea id="message" placeholder="提出问题，或加入他们的讨论…" rows="2" maxlength="64000" required></textarea>
+        <div class="composer-bottom"><button type="button" id="attach" class="attach-button"><svg class="icon" aria-hidden="true"><use href="#i-attach"/></svg><span>添加资料</span></button><input id="file" type="file" accept=".txt,.md,.json,.csv,.ts,.js,.py,.html,.css,.toml,.yaml,.yml" hidden><span id="composer-hint">也可以拖入文本文件</span><kbd id="send-shortcut" aria-hidden="true"></kbd><button type="submit" class="send-button" id="send" aria-label="发送消息"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span id="send-label" class="sr-only">发送</span></button></div>
+      </form>
+      <div class="composer-footnote"><span id="budget" class="budget" hidden></span><span>Enter 换行</span></div>
+    </div>
+  </main>
+  <aside id="activity" class="activity" aria-label="Agent 状态与共享资料">
+    <div class="activity-title"><h2>协作详情</h2><button id="close-activity" class="icon-button" type="button" title="关闭详情" aria-label="关闭详情"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="inspector-section"><div class="section-heading"><h3>参与者</h3><span id="participant-count">0</span></div><div id="agents"></div><button id="manage-members" class="text-button" type="button">管理成员</button><p class="inspector-caption">独立思考，共享这段对话。</p></div>
+    <div class="inspector-section"><div class="section-heading"><h3>结论与问题</h3><span id="outcome-count">0</span></div><p id="outcome-summary" class="inspector-caption">从共同依据中形成判断。</p><button id="show-outcomes" class="text-button" type="button">查看与提议</button></div>
+    <div class="inspector-section materials-section"><div class="section-heading"><h3>共享资料</h3><span id="material-count">0</span></div><div id="materials"></div><button id="add-material" class="text-button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>添加资料</button></div>
+    <div class="inspector-section"><h3>项目协作</h3><p id="workspace-summary" class="inspector-caption">明确共享工作区，再声明修改意图。</p><button id="show-workspaces" class="text-button" type="button">工作区与修改意图</button></div>
+    <div class="inspector-section"><h3>通信记录</h3><p id="usage-summary" class="inspector-caption"></p><button id="export-json" class="text-button" type="button">导出结构化记录</button><button id="show-input-budget" class="text-button" type="button">新增输入预算</button><button id="archive-discussion" class="text-button" type="button">归档讨论</button></div><div class="activity-note"><svg class="icon" aria-hidden="true"><use href="#i-local"/></svg><p>仅共享此任务的对话与指定资料。<br>私有输出只对你可见。</p></div>
+  </aside>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+<dialog id="activity-dialog" class="activity-dialog" aria-label="Agent 状态与共享资料"></dialog>
+<dialog id="material-dialog" aria-labelledby="material-heading"><div class="dialog-heading"><h2 id="material-heading">共享资料</h2><p>每次更新保留新快照，过去的引用始终可读。</p></div><label>资料版本<select id="material-version" aria-label="资料版本"></select></label><p id="material-meta" class="muted"></p><pre id="material-content" class="material-preview"></pre><p id="material-error" class="message-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" id="material-revise">上传新版本</button><input type="file" id="material-revision-file" accept=".txt,.md,.json,.csv,.ts,.js,.py,.html,.css,.toml,.yaml,.yml" hidden><button type="button" id="material-more">加载后续内容</button><button type="button" id="copy-material-reference">复制引用</button><button type="button" id="close-material">完成</button></div></dialog>
+<dialog id="create-dialog">
+  <form id="create-form">
+    <div id="create-content" class="dialog-content">
+    <div class="dialog-heading"><h2>开启一场讨论</h2><p>邀请已有的工作会话，或为讨论新建 Agent。</p></div>
+    <div class="section-heading"><h3>讨论成员</h3><button id="add-participant" class="text-button" type="button">添加成员</button></div>
+    <div id="new-participants" class="participant-picker" aria-label="选择讨论成员"></div>
+    <p id="creation-availability" class="creation-availability" role="status">正在检查本机运行环境…</p>
+    <button id="creation-diagnostics" class="text-button" type="button" hidden>检查配置与连接</button>
+    <p id="create-error" class="message-error" role="alert" hidden></p>
+    <label>讨论主题<input id="new-title" maxlength="160" placeholder="想一起解决什么？" required autofocus></label>
+    <label id="new-model-label">新会话模型<select id="new-model" required aria-describedby="model-help"></select></label>
+    <small id="model-help">新建会话共用所选模型；已有会话保留原模型和工具。</small>
+    <p class="muted">新建会话提供通信与共享资料工具。要延续已有编码工作，请选择已连接的原工作会话。</p>
+    <p>Agent 自主交流，需要你作决定时会暂停。</p>
+    <details class="advanced-settings"><summary>协作设置<span id="create-policy">自主讨论</span></summary><label class="limit-toggle"><input id="limits-enabled" type="checkbox" aria-controls="create-limits">设置次数和时长上限</label><div id="create-limits" hidden><div class="form-row"><label>最多唤醒次数<input id="max-runs" type="number" value="12" min="1" max="100" required disabled></label><label>时限（分钟）<input id="minutes" type="number" value="20" min="1" max="240" required disabled></label></div><p>一位 Agent 开始一次处理计为一次唤醒；多条消息可以合并。达到任一上限后暂停。</p></div><p id="create-autonomy-help">不设讨论次数或时长上限，你随时可以暂停或停止。</p></details>
+    </div>
+    <div class="dialog-actions"><button type="button" id="cancel-create">取消</button><button type="submit" class="primary" id="create-submit">创建讨论</button></div>
+  </form>
+</dialog>
+<dialog id="harness-dialog" aria-labelledby="harness-heading">
+  <div class="dialog-heading"><h2 id="harness-heading">本机 Agents</h2><p>自动检查安装位置，沿用已有的运行环境。</p></div>
+  <p id="harness-summary" class="harness-summary" role="status">正在检测…</p>
+  <div id="harness-list" class="harness-list" aria-label="本机 harness 检测结果"></div>
+  <section class="native-connections"><div class="section-heading"><h3>已连接的工作会话</h3><button id="connect-pi" type="button" class="text-button">连接原 pi 会话</button></div><div id="native-session-list"></div>
+  <div id="bridge-setup" class="bridge-setup" hidden><p>在原 pi 中加载 Noah 扩展，再执行连接命令。现有模型与工具保持原样。</p><p>扩展位置</p><code id="bridge-extension-path"></code><p>首次加载：把扩展加入该项目的 pi extensions 配置后执行 /reload；也可在启动 pi 时用 -e 指定该路径。</p><p>在同一个 pi 会话中执行（加入凭证 10 分钟内有效）</p><code id="bridge-connect-command"></code><button id="copy-bridge-command" type="button" class="text-button">复制连接命令</button></div></section>
+  <section class="native-connections"><button id="connect-grok" type="button" class="text-button">Grok 实验性连接</button><div id="grok-bridge-setup" class="bridge-setup" hidden><p id="grok-setup-instruction"></p><p class="muted">已验证 Noah 的本地通信脚本；真实 Grok 原会话端到端尚未验收。</p><p>项目级 hooks 文件</p><code id="grok-hook-path"></code><p>加载后，在原会话中发送以下连接请求（10 分钟内有效）</p><code id="grok-join-prompt"></code><button id="copy-grok-prompt" type="button" class="text-button">复制连接请求</button></div></section>
+  <p class="harness-help">pi 支持正文被动追加；Grok 使用原生通知与全文读取。安装检测不代表已经连接。</p>
+  <details class="diagnostic-panel"><summary id="run-diagnostics">检查本机状态</summary><pre id="diagnostic-result">展开后检查，不会启动模型。</pre></details>
+  <p id="harness-error" class="message-error" role="alert" hidden></p>
+  <p id="release-info" class="inspector-caption"></p>
+  <div class="dialog-actions"><button id="refresh-harnesses" type="button">重新检测</button><button id="close-harnesses" type="button" class="primary">完成</button></div>
+</dialog>
+<dialog id="attention-dialog" aria-labelledby="attention-heading"><div class="dialog-heading"><h2 id="attention-heading">需要你处理</h2><p>决定、连接与异常集中在这里。普通空闲不会被当作完成。</p></div><div id="attention-list" class="maturity-list"></div><label class="limit-toggle"><input id="system-notifications" type="checkbox">启用系统提醒</label><p id="notification-help" class="muted">默认关闭；只显示固定提示，不包含对话正文。</p><p id="notification-test-status" class="muted" role="status" aria-live="polite">可先发送一次测试提醒，不改变上面的开关。</p><div class="dialog-actions"><button id="test-notification" type="button" disabled>发送测试提醒</button><button type="button" data-close="attention-dialog">完成</button></div></dialog>
+<dialog id="members-dialog" aria-labelledby="members-heading"><div class="dialog-heading"><h2 id="members-heading">讨论成员</h2><p>加入已有工作会话，或新建独立 Agent。退出后历史仍保留。</p></div><div id="member-list" class="maturity-list"></div><form id="invite-form"><details id="invite-details"><summary>邀请成员</summary><label>会话来源<select id="invite-source" required></select></label><label>显示名称<input id="invite-label" maxlength="80" required></label><label id="invite-model-label">新会话模型<select id="invite-model"></select></label><label class="limit-toggle"><input id="invite-history" type="checkbox" checked>自动补送此前全部公开对话</label><p class="muted">补送历史不会单独启动模型；取消后只自动同步新消息，成员仍可主动查阅本讨论公开记录。</p><button type="submit" class="primary">加入讨论</button></details></form><p id="member-error" class="message-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" data-close="members-dialog">完成</button></div></dialog>
+<dialog id="outcomes-dialog" aria-labelledby="outcomes-heading"><div class="dialog-heading"><h2 id="outcomes-heading">结论与问题</h2><p>保留每位成员的判断、依据和异议。确认一条提议不会结束讨论。</p></div><div id="outcome-list" class="maturity-list"></div><form id="outcome-form"><details id="outcome-editor"><summary id="outcome-editor-title">提出新的判断</summary><label>类型<select id="outcome-kind"><option value="conclusion">结论</option><option value="disagreement">异议</option><option value="open_question">未决问题</option></select></label><label>标题<input id="outcome-title" maxlength="160" required></label><label>内容<textarea id="outcome-content" maxlength="64000" rows="4" required></textarea></label><fieldset class="evidence-field"><legend>引用共享消息作为依据</legend><div id="outcome-evidence" class="evidence-options"></div><p class="muted">从已加载消息中选择，也可在对话中点击“提为结论”。</p></fieldset><div class="inline-actions"><button class="primary" type="submit">保存提议</button><button type="button" id="cancel-outcome-edit">重置</button></div></details></form><p id="outcome-error" class="message-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" data-close="outcomes-dialog">完成</button></div></dialog>
+<dialog id="workspaces-dialog" aria-labelledby="workspaces-heading"><div class="dialog-heading"><h2 id="workspaces-heading">工作区与修改意图</h2><p>公开目录与自愿声明的修改路径，帮助发现协作冲突。不会读取项目内容，也不会锁住文件。</p></div><div id="workspace-list" class="maturity-list"></div><form id="workspace-form"><details><summary>共享一个工作区路径</summary><label>项目目录<input id="workspace-path" placeholder="/Users/你的名字/Projects/项目" required></label><p class="muted">该目录路径将对本讨论全部成员可见；原 harness 的工具权限继续生效。</p><button class="primary" type="submit">共享路径</button></details></form><form id="intent-form"><details><summary>声明我的修改意图</summary><label>工作区<select id="intent-workspace" required></select></label><label>相对路径<input id="intent-path" placeholder="src/feature" maxlength="1024" required></label><label>准备做什么<input id="intent-description" maxlength="500" required></label><p class="muted">15 分钟后过期；这是提示性声明，不是文件锁。</p><button class="primary" type="submit">记录意图</button></details></form><p id="workspace-error" class="message-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" data-close="workspaces-dialog">完成</button></div></dialog>
+<dialog id="input-budget-dialog" aria-labelledby="input-budget-heading"><form id="input-budget-form"><div class="dialog-heading"><h2 id="input-budget-heading">新增输入预算</h2><p>可选限制这场讨论由 Noah 新增的累计输入。默认无上限，达到上限后暂停并保留完整正文。</p></div><p id="input-budget-used" class="muted"></p><label class="limit-toggle"><input id="input-budget-enabled" type="checkbox">设置新增输入总量上限</label><label id="input-budget-value-label" hidden>累计上限（KiB，1 KiB = 1024 字节）<input id="input-budget-value" type="number" min="1" max="1000000" step="1" value="1024"></label><p class="muted">包含受管输入与原生桥接正文/通知预留；不包括原有上下文、手动读取资料或原工具自身输入。字节不是 token，不代表总费用。调整不会自动继续讨论。</p><p id="input-budget-error" class="message-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" data-close="input-budget-dialog">取消</button><button class="primary" type="submit">保存设置</button></div></form></dialog>
+<dialog id="runs-dialog" aria-labelledby="runs-heading"><div class="dialog-heading"><h2 id="runs-heading">私有运行输出</h2><p>只对你可见，不会自动分享给讨论成员。每次运行保留前 65,536 字符；公开消息另行完整保存。</p></div><div id="runs-list" class="maturity-list"></div><p id="runs-error" class="message-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" id="runs-more">加载更早运行</button><button type="button" data-close="runs-dialog">完成</button></div></dialog>
+<dialog id="search-dialog" aria-labelledby="search-heading"><div class="dialog-heading"><h2 id="search-heading">搜索共享消息</h2><p>查找已公开的讨论正文，私有输出不在搜索范围内。</p></div><form id="message-search-form" class="message-search-form"><input id="message-query" type="search" maxlength="200" placeholder="输入关键词" aria-label="消息关键词" required><select id="search-scope" aria-label="搜索范围"><option value="all">全部讨论</option><option value="current">当前讨论</option></select><button class="primary" type="submit">搜索</button></form><p id="message-search-status" class="muted" role="status"></p><div id="message-search-results"></div><div class="dialog-actions"><button id="close-search" type="button">完成</button></div></dialog>
+<dialog id="resume-dialog"><form id="resume-form"><div class="dialog-heading"><h2>继续这次讨论</h2><p id="resume-description">Agent 将继续处理排队的消息，自主决定是否继续交流。</p></div><details id="resume-settings" class="advanced-settings"><summary>协作设置<span id="resume-policy">自主讨论</span></summary><label class="limit-toggle"><input id="resume-limits-enabled" type="checkbox" aria-controls="resume-limits">设置次数和时长上限</label><div id="resume-limits" hidden><div class="form-row"><label><span id="extra-runs-label">增加唤醒次数</span><input id="extra-runs" type="number" value="4" min="1" max="100" required disabled></label><label>时限（分钟）<input id="extra-minutes" type="number" value="20" min="1" max="240" required disabled></label></div><p id="resume-limits-help"></p></div><p id="resume-autonomy-help">不设讨论次数或时长上限，你随时可以暂停或停止。</p></details><p id="resume-error" class="message-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" id="cancel-resume">取消</button><button id="resume-submit" type="submit" class="primary">继续协作</button></div></form></dialog>
+</body>
+</html>

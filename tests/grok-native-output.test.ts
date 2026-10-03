@@ -1,0 +1,56 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { formatGrokNativeOutput } from '../src/grok-native-output.ts';
+import { Store } from '../src/store.ts';
+import { GrokNativeBridge } from '../src/grok-native-bridge.ts';
+
+test('Grok terminal JSON preserves long bodies, emoji and original newlines on short lines', () => {
+  const content = 'a'.repeat(511) + '🔎' + 'b'.repeat(11500) + '\n中文原换行\r\n' + '\n'.repeat(600) + '"\\';
+  const response = { conversationId: 'discussion', message: { id: 'message', offset: 0, totalLength: content.length, content }, next: null };
+  const output = formatGrokNativeOutput(response, 'noah_read');
+  const parsed = JSON.parse(output);
+  assert.equal(parsed.message.content, undefined);
+  assert.equal(parsed.message.contentEncoding, 'concat');
+  assert.equal(parsed.message.contentChunks.join(''), content);
+  assert.equal(parsed.message.contentChunks[0].length, 511);
+  assert.ok(parsed.message.contentChunks[1].startsWith('🔎'));
+  assert.ok(output.split('\n').every(line => line.length <= 525));
+  assert.equal(parsed.next, null);
+  assert.equal(response.message.content, content, 'HTTP response remains unchanged');
+  const material = JSON.parse(formatGrokNativeOutput({ id: 'material', content, nextOffset: 16000 }, 'noah_material'));
+  assert.equal(material.contentChunks.join(''), content);
+  assert.equal(material.contentEncoding, 'concat');
+  assert.equal(material.content, undefined);
+  assert.equal(material.nextOffset, 16000);
+  assert.equal(output.at(-1), '\n');
+});
+
+test('Grok read reserves exactly the CLI bytes and retries at the budget boundary are idempotent', async t => {
+  const store = new Store(':memory:'), bridge = new GrokNativeBridge(store);
+  t.after(() => { bridge.close(); store.close(); });
+  const grant = bridge.issueJoinToken();
+  const registration = await bridge.handle('/api/grok-bridge/register', 'POST', '', { joinToken: grant.joinToken, nativeSessionId: 'output-probe-session', projectDir: '/work', label: 'Original Grok', callCommand: 'node /noah/grok-native-cli.ts call /private/grant.json' });
+  assert.equal(registration?.status, 201);
+  const binding = registration!.body;
+  const request = (path: string, input: unknown = {}) => bridge.handle('/api/grok-bridge/' + path, 'POST', binding.credential, input);
+  await request('poll');
+  const c = store.create('CLI byte budget', undefined, undefined, undefined, false, [{ id: 'original', harness: 'grok', mode: 'external', bindingId: binding.bindingId }]);
+  const content = '中文🔎\n'.repeat(2401);
+  store.send(c.id, 'human', 'original', content, 'body');
+  const notice = (await request('poll'))!.body.notification;
+  const before = store.conversation(c.id).context_used_bytes;
+  const input = { name: 'noah_read', args: { batchId: notice.batchId } };
+  const page = await request('tool', input);
+  assert.equal(page?.status, 200);
+  const expected = before + Buffer.byteLength(formatGrokNativeOutput(page!.body, 'noah_read'));
+  assert.equal(store.conversation(c.id).context_used_bytes, expected);
+  store.db.prepare('UPDATE conversations SET context_budget_bytes=? WHERE id=?').run(expected, c.id);
+  assert.deepEqual(await request('tool', input), page);
+  assert.equal(store.conversation(c.id).context_used_bytes, expected);
+  const denied = await request('tool', { name: 'noah_read', args: page!.body.next });
+  assert.equal(denied?.status, 409);
+  assert.equal(store.conversation(c.id).status, 'paused');
+  assert.equal(store.conversation(c.id).context_used_bytes, expected);
+  assert.equal((store.db.prepare('SELECT read_chars FROM grok_bridge_items').get() as any).read_chars, page!.body.message.content.length);
+  assert.equal(store.messages(c.id)[0].content, content);
+});
